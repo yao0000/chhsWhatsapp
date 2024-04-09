@@ -15,10 +15,10 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
             return
 
         df = pd.read_excel(self.string_filepath.get())
-        column_to_check = ['寝室床号', '姓名', '日期', '时间', '手机号', '离舍']
+        column_to_check = ['寝室', '姓名', '日期', '时间', '监护人电话', '离舍']
 
         if not all(column in df.columns for column in column_to_check):
-            messagebox.showerror(title="错误", message=f'Excel文件表头须拥有{column_to_check}')
+            messagebox.showerror(title="错误", message=f'Excel文件表头须拥有{column_to_check}\n请查阅"使用须知"')
             return
 
         df.set_index('姓名', inplace=True)
@@ -32,13 +32,13 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
             if rows['离舍'] == 1 and not is_displayed_leave:
                 text_date = ' (星期' + WhatsappSendMessage.WhatsappParentNotice.get_date_of_week(rows['日期']) + ')'
                 timing = str(rows['日期'])[:10] + text_date + ' ' + str(rows['时间'])[:5]
-                message = f'{name} 同学 {rows['寝室']}-{rows['床号']} 于 {timing} 离校 (回家)。\n敬请家长/监护人关注。'
+                message = f'{name} 同学 {rows['寝室']} 于 {timing} 离校 (回家)。\n敬请家长/监护人关注。'
 
                 self.string_leaving_sample.set(message)
                 is_displayed_leave = True
 
             elif rows['离舍'] == 0 and not is_display_stay:
-                message = f"{name} 同学 {rows['寝室']}-{rows['床号']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
+                message = f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
 
                 self.string_staying_sample.set(message)
 
@@ -94,7 +94,6 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         label_logo.grid(row=5, column=0, padx=5, pady=5)
 
     def tab1_grid_init(self):
-
         self.tabview.tab(self.tab1).grid_columnconfigure((0, 1, 2, 3), weight=1)
         self.tabview.tab(self.tab1).grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7), weight=2)
 
@@ -127,9 +126,74 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.btn_send_message.grid(row=5, column=3, padx=10, pady=10, sticky="ew")
 
     def tab2_grid_init(self):
-
         self.tabview.tab(self.tab2).grid_columnconfigure((0, 1, 2, 3), weight=1)
         self.tabview.tab(self.tab2).grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7), weight=2)
+        self.scrollable_frame.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+
+        # section 1: labelling
+        label_title1 = customtkinter.CTkLabel(master=self.scrollable_frame, text='Excel文件格式样本: ')
+        label_title1.grid(row=0, column=0, padx=1, pady=1, sticky="ew")
+
+        # section 2: data sample display
+        data = [('寝室', '姓名', '日期', '时间', '监护人电话', '离舍'),
+                ('A1234', '学生姓名', '2020-01-01', '17:30:00', '0123456789', '1')]
+
+        data_rows_count = len(data)
+        data_columns_count = len(data[0])
+
+        for i in range(data_rows_count):
+            for j in range(data_columns_count):
+                print(data[i][j])
+                d = customtkinter.CTkLabel(master=self.scrollable_frame,
+                                           corner_radius=10,
+                                           text_color='black',
+                                           fg_color='grey',
+                                           text=data[i][j])
+                d.grid(row=(i + 1), column=j, sticky="ew")
+
+        # section 3 format information
+        label_attention = customtkinter.CTkLabel(master=self.scrollable_frame,
+                                                 text="注意事项: \n"
+                                                      "1. 日期格式为: 2020-01-01 (YYYY-MM-DD)\n"
+                                                      "2. 时间格式为24小时制 HH:mm:ss (例 18:30:00)\n"
+                                                      "3. 监护人电话-马来西亚号码以外都需要加上区号"
+                                                      " (例，新加坡 +65)\n"
+                                                      "4. 离舍使用数字 1(离舍) \\ 0(留舍) 区别",
+                                                 anchor="nw",
+                                                 justify="left")
+        label_attention.grid(row=3, column=0, padx=5, columnspan=3, pady=(20, 10), sticky="nw")
+
+        #
+        data_format = [('表头栏', '单元格格式', '备注'),
+                       ('寝室', 'General', '楼层+床号'),
+                       ('姓名', 'General', '学生姓名'),
+                       ('日期', 'Date', 'YYYY-MM-DD'),
+                       ('时间', 'Time', '24小时制 18:00:00'),
+                       ('监护人电话', 'Text', '马来西亚以外号码须加上区号 (新加坡 +65)'),
+                       ('离舍', 'General', '"1"为离舍；"0"为留舍')]
+
+        data_format_rows_count = len(data_format)
+        data_format_columns_count = len(data_format[0])
+
+        for i in range(data_format_rows_count):
+            for j in range(data_format_columns_count):
+                print(data_format[i][j])
+                d = customtkinter.CTkLabel(master=self.scrollable_frame,
+                                           corner_radius=10,
+                                           text_color='black',
+                                           fg_color='grey',
+                                           text=data_format[i][j])
+                if j == 0:
+                    d.grid(row=(i + 4), column=j, columnspan=2, sticky="ew")
+                    continue
+                if j == 1:
+                    d.grid(row=(i + 4), column=(j+1), sticky="ew")
+                    continue
+                if j == 2:
+                    d.grid(row=(i+4), column=(j+1), columnspan=3, sticky="ew")
+                    continue
+
+
 
     def config(self):
         # configure the attribute
@@ -158,7 +222,7 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         super().__init__()
 
         self.title("Whatsapp 通知系统")
-        self.geometry(f"{800}x{380}")
+        self.geometry(f"{900}x{380}")
         self.change_appearance_mode_event("深色模式")  # set default appearance
 
         # configure grid layout
@@ -167,7 +231,7 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.grid_rowconfigure((0, 1, 2, 3, 4), weight=1)
 
         # sidebar init
-        self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=20)
+        self.sidebar_frame = customtkinter.CTkFrame(self, width=250, corner_radius=20)
         self.appearance_mode_option_menu = customtkinter.CTkOptionMenu(self.sidebar_frame,
                                                                        values=["深色模式", "亮色模式", "系统"],
                                                                        command=self.change_appearance_mode_event)
@@ -181,7 +245,7 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.tabview.grid(row=0, column=1, rowspan=7, columnspan=4, padx=10, pady=10, sticky="ew")
 
         self.tab1 = "回家/留宿通知"
-        self.tab2 = "Excel文件格式"
+        self.tab2 = "使用须知"
         self.tabview.add(self.tab1)
         self.tabview.add(self.tab2)
 
@@ -217,6 +281,9 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
 
         # section 6: button to send the whatsapp message
         self.btn_send_message = customtkinter.CTkButton(master=self.tabview.tab(self.tab1), text='批量发送信息')
+
+        # tab 2 attribute
+        self.scrollable_frame = customtkinter.CTkScrollableFrame(master=self.tabview.tab(self.tab2), width=600)
 
         self.tab1_grid_init()
         self.tab2_grid_init()

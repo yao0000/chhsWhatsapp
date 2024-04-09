@@ -27,14 +27,14 @@ class WhatsappParentNotice:
 
         for name, rows in df.iterrows():
             if rows['离舍'] == 0:
-                message = f"{name} 同学 {rows['寝室']}-{rows['床号']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
-                self.send_whatsapp_message(rows['手机号'], message)
+                message = f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
+                self.send_whatsapp_message(rows['监护人电话'], message)
 
             elif rows['离舍'] == 1:
                 text_date = ' (星期' + self.get_date_of_week(rows['日期']) + ')'
                 timing = str(rows['日期'])[:10] + text_date + ' ' + str(rows['时间'])[:5]
-                message = f'{name} 同学 {rows['寝室']}-{rows['床号']} 于 {timing} 离校 (回家)。\n敬请家长/监护人关注。'
-                self.send_whatsapp_message(rows['手机号'], message)
+                message = f'{name} 同学 {rows['寝室']} 于 {timing} 离校 (回家)。\n敬请家长/监护人关注。'
+                self.send_whatsapp_message(rows['监护人电话'], message)
 
 
     @staticmethod
