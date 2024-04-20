@@ -81,30 +81,20 @@ class WhatsappParentNotice:
                 continue
             print(rows['监护人电话'])
 
-            message = ""
-
             if not pd.isna(rows['其他信息']):
                 message = rows['其他信息']
-                # self.send_whatsapp_message(rows['监护人电话'], message)
+                self.send_whatsapp_message(rows['监护人电话'], message)
                 continue
 
-            # if date is empty then use the default return date
-            date = ''
-            if pd.isna(rows['日期']):
-                date = self.return_date
-            else:
-                date = ' (星期' + get_date_of_week(rows['日期']) + ')'
-                date = str(rows['日期'])[:10] + date + ' ' + str(rows['时间'])[:5]
-
             if rows['离舍'] == 0:
-                message = f"{name} 同学 {rows['寝室']} 于 {date} 本周留舍 (留校)。\n敬请家长/监护人关注。"
-                # self.send_whatsapp_message(rows['监护人电话'], message)
+                message = f"{name} 同学 {rows['寝室']} 于 {self.return_date} 本周留舍 (留校)。\n敬请家长/监护人关注。"
+                self.send_whatsapp_message(rows['监护人电话'], message)
 
             elif rows['离舍'] == 1:
+                date = ' (星期' + get_date_of_week(rows['日期']) + ')'
+                date = str(rows['日期'])[:10] + date + ' ' + str(rows['时间'])[:5]
                 message = f'{name} 同学 {rows['寝室']} 于 {date} 离校 (回家)。\n敬请家长/监护人关注。'
-                # self.send_whatsapp_message(rows['监护人电话'], message)
-
-            self.send_whatsapp_message(rows['监护人电话'], message)
+                self.send_whatsapp_message(rows['监护人电话'], message)
 
             if self.stop_sending:
                 messagebox.showinfo(message=f'已停止发送。\n最后一位信息接收者：{name}')

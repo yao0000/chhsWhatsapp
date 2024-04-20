@@ -4,12 +4,14 @@ import tkinter
 from CTkMessagebox import CTkMessagebox
 from PIL import Image
 from tkinter import messagebox, font
+
 from tkcalendar import Calendar as DatePicker
 
 import os
 import customtkinter
 import pandas as pd
 import datetime
+import webbrowser
 
 from WhatsappSendMessage import WhatsappParentNotice
 from WhatsappSendMessage import resource_path
@@ -23,7 +25,7 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
 
         if self.mode_var.get() == self.WEB_APP:
             self.option_delay.configure(values=self.OPTION_WEB)
-            self.option_delay.set(self.OPTION_APP[4])
+            self.option_delay.set(self.OPTION_WEB[4])
         elif self.mode_var.get() == self.INSTALLED_APP:
             self.option_delay.configure(values=self.OPTION_APP)
             self.option_delay.set(self.OPTION_APP[4])
@@ -35,12 +37,19 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
                     return
 
                 if self.mode_var.get() == self.INSTALLED_APP:
-                    respond = CTkMessagebox(title="提示", message='开始作业前, 请点击whatsapp聊天室的文字输入框。'
-                                                                  '\n程序执行中，勿操作电脑。中断作业除外。',
-                                            icon='info', option_1='取消', option_2='开始作业')
+                    respond = CTkMessagebox(title="提示",
+                                            message='开始作业前, 请点击whatsapp聊天室的文字输入框。',
+                                            icon='info',
+                                            option_1='取消',
+                                            option_2='开始作业')
 
-                    if respond.get() == '取消':
+                    if respond.get() == '取消' or respond.get() is None:
                         return
+
+                    CTkMessagebox(title='提示',
+                                  message='程序执行中，勿操作电脑。\n中断作业除外。',
+                                  icon='info',
+                                  option_1='确认').get()
 
                     self.btn_send_message.configure(text=self.STRING_CANCEL_SEND)
 
@@ -56,12 +65,26 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
                     whatsapp_thread.start()
 
                 elif self.mode_var.get() == self.WEB_APP:
-                    respond = CTkMessagebox(title="提示", message='请确保默认浏览器已登入WhatsApp账号。'
-                                                                  '\n程序执行中，勿操作电脑。中断作业除外。',
-                                            icon='info', option_1='取消', option_2='开始作业')
+                    respond = CTkMessagebox(title="提示",
+                                            message='请确保默认浏览器已登入\nWhatsApp账号。',
+                                            icon='info',
+                                            option_1='取消',
+                                            option_2='开始作业',
+                                            option_3='打开默认浏览器')
 
-                    if respond.get() == '取消':
+                    if respond.get() == '取消' or respond.get() is None:
                         return
+
+                    if respond.get() == '打开默认浏览器':
+                        webbrowser.open('https://www.google.com')
+                        return
+
+                    CTkMessagebox(title='提示',
+                                  message='程序执行中，勿操作电脑。\n中断作业除外。',
+                                  icon='info',
+                                  option_1='确认').get()
+
+                    self.btn_send_message.configure(text=self.STRING_CANCEL_SEND)
 
                     whatsapp_thread = threading.Thread(target=lambda: (
                         self.web_app.set_value(
@@ -69,7 +92,6 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
                             int(self.option_delay.get())
                         ),
                         self.web_app.run()
-
                     ))
                     whatsapp_thread.start()
 
@@ -94,6 +116,7 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
 
             df.set_index('姓名', inplace=True)
             is_displayed_leave = False
+            is_displayed_staying = False
 
             for name, rows in df.iterrows():
 
@@ -102,10 +125,17 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
                     timing = str(rows['日期'])[:10] + text_date + ' ' + str(rows['时间'])[:5]
                     message = f'{name} 同学 {rows['寝室']} 于 {timing} 离校 (回家)。\n敬请家长/监护人关注。'
 
-                    self.string_leaving_sample.set(message)
+                    self.textbox_leaving.delete(1.0, tkinter.END)
+                    self.textbox_leaving.insert('0.0', message)
                     is_displayed_leave = True
 
-                if is_displayed_leave:
+                elif rows['离舍'] == 0 and not is_displayed_staying:
+                    message = f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
+                    self.textbox_staying.delete(1.0, tkinter.END)
+                    self.textbox_staying.insert('0.0', message)
+                    is_displayed_leave = True
+
+                if is_displayed_leave and is_displayed_staying:
                     break
 
         return True
@@ -137,7 +167,8 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         customtkinter.set_widget_scaling(new_scaling_float)
 
     def clear_string_sample(self):
-        self.string_leaving_sample.set("")
+        self.textbox_leaving.delete(1.0, tkinter.END)
+        self.textbox_staying.delete(1.0, tkinter.END)
 
     def sidebar_grid_init(self):
         self.sidebar_frame.grid(row=0, column=0, rowspan=6, sticky="e")
@@ -168,7 +199,7 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.tabview.tab(self.TAB1).grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7), weight=2)
 
         # section 1: file chooser
-        label_filepath = customtkinter.CTkLabel(self.tabview.tab(self.TAB1), text="文件路径: ")
+        label_filepath = customtkinter.CTkLabel(self.tabview.tab(self.TAB1), text="文件路径：")
         label_filepath.grid(row=0, column=0, padx=10, pady=10)
         entry_filepath = customtkinter.CTkEntry(self.tabview.tab(self.TAB1), textvariable=self.string_filepath,
                                                 state="disable")
@@ -190,36 +221,27 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         # section 3: To display leaving message
         label_leave_hostel_eg = customtkinter.CTkLabel(master=self.tabview.tab(self.TAB1), text="离舍范本：")
         label_leave_hostel_eg.grid(row=3, column=0, padx=10, pady=5)
-        entry_leaving_sample = customtkinter.CTkEntry(master=self.tabview.tab(self.TAB1),
-                                                      textvariable=self.string_leaving_sample,
-                                                      state="disable")
-        entry_leaving_sample.grid(row=3, column=1, columnspan=3, padx=10, pady=5, sticky='ew')
+        self.textbox_leaving.grid(row=3, column=1, columnspan=3, padx=10, pady=5, sticky='ew')
 
         # belongs to display section
         label_stay_hostel_eg = customtkinter.CTkLabel(master=self.tabview.tab(self.TAB1), text='留宿范本：')
         label_stay_hostel_eg.grid(row=4, column=0, padx=10, pady=(5, 10))
-        entry_staying_sample = customtkinter.CTkEntry(master=self.tabview.tab(self.TAB1),
-                                                      textvariable=self.string_staying_sample,
-                                                      state='disable')
-        entry_staying_sample.grid(row=4, column=1, columnspan=3, padx=10, pady=(5, 10), sticky='ew')
+        self.textbox_staying.grid(row=4, column=1, columnspan=3, padx=10, pady=(5, 10), sticky='ew')
 
         # section 4: mode selection
         label_mode = customtkinter.CTkLabel(master=self.tabview.tab(self.TAB1), text="运行平台：")
-        label_mode.grid(row=5, column=0, padx=10, pady=10)
-        self.radio_web.grid(row=5, column=1, padx=1, pady=0, sticky="ew")
-        self.radio_app.grid(row=6, column=1, padx=1, pady=0, sticky="ew")
-
-        label_explain = customtkinter.CTkLabel(master=self.tabview.tab(self.TAB1),
-                                               text="注:\t网页版稳定, 但慢\n\t软件版不稳定, 但快",
-                                               font=('Helvetica', 12))
-        label_explain.grid(row=5, column=2, rowspan=2, columnspan=2, padx=10)
+        label_mode.grid(row=5, column=3, padx=10, pady=(10, 2), sticky='nw')
+        self.radio_web.grid(row=6, column=3, padx=1, pady=1, sticky="ew")
+        self.radio_app.grid(row=7, column=3, padx=1, pady=1, sticky="ew")
 
         # section 5: Allow to modify the interval of sending message
-        label_delay = customtkinter.CTkLabel(master=self.tabview.tab(self.TAB1), text='信息发送延迟间隔：')
-        label_delay.grid(row=7, column=0, columnspan=2, padx=1, pady=(0, 10))
-        self.option_delay.grid(row=7, column=2, padx=10, pady=1, sticky="ew")
+        label_delay = customtkinter.CTkLabel(master=self.tabview.tab(self.TAB1),
+                                             text='信息发送延迟间隔：',
+                                             anchor='nw')
+        label_delay.grid(row=6, column=0, columnspan=2, padx=20, pady=1, sticky='ew')
+        self.option_delay.grid(row=7, column=0, padx=(20, 0), pady=1, sticky='ns')
         label_second = customtkinter.CTkLabel(master=self.tabview.tab(self.TAB1), text='(秒)')
-        label_second.grid(row=7, column=3, padx=10, pady=1, sticky="nw")
+        label_second.grid(row=7, column=1, padx=1, pady=1, sticky="nw")
 
         # section 6: To send message in batch
         self.btn_send_message.grid(row=8, column=3, padx=10, pady=(10, 0), sticky="ew")
@@ -374,10 +396,13 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
                                                         text="清除信息",
                                                         border_width=2)
         self.btn_generate_example = customtkinter.CTkButton(self.tabview.tab(self.TAB1),
-                                                            text="信息生成测试",
+                                                            text="文件读取测试",
                                                             border_width=2)
-        self.string_leaving_sample = customtkinter.StringVar()
-        self.string_staying_sample = customtkinter.StringVar()
+        self.textbox_leaving = customtkinter.CTkTextbox(master=self.tabview.tab(self.TAB1),
+                                                        height=50)
+        self.textbox_staying = customtkinter.CTkTextbox(master=self.tabview.tab(self.TAB1),
+                                                        height=50)
+
 
         self.OPTION_APP = ['1', '2', '3', '4', '5']
         self.OPTION_WEB = [str(int(option) + 10) for option in self.OPTION_APP]

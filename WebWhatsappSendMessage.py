@@ -67,7 +67,7 @@ class WebWhatsappSendMessage:
 
     def run(self):
         self.set_stop(False)
-        webbrowser.open("about:blank")
+        webbrowser.open('https://www.google.com')
         df = self.read_excel_file()
 
         for name, rows in df.iterrows():
