@@ -7,6 +7,14 @@ import sys
 import pandas as pd
 import pyperclip
 from tkinter import messagebox
+from pyautogui import size
+
+from MaterialSource import (
+    textbox_images_paths,
+    user_not_found_images_paths
+)
+
+import Log
 
 
 def get_date_of_week(date):
@@ -23,25 +31,35 @@ def get_date_of_week(date):
     return switcher.get(day_name, '')
 
 
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
-
-
 class WhatsappParentNotice:
-    # (留舍、离舍)批量通知表格须有属性
-    staying_leaving_columns = ['寝室', '姓名', '日期', '时间', '监护人电话', '离舍', '其他信息']
+
+    @staticmethod
+    def user_not_found(phone_number: str):
+        accuracy = 0.8
+
+        # have to modify
+        for image in user_not_found_images_paths:
+            try:
+                coords = pyautogui.locateOnScreen(image, confidence=accuracy)
+
+                # 如果找到图片，点击图片的中心位置
+                if coords:
+                    Log.log_message(_time=time.localtime(),
+                                    receiver=phone_number,
+                                    message='用户不存在')
+                    return
+                else:
+                    print('not found')
+
+            except Exception as e:
+                print(f'err: {str(e)}')
 
     @staticmethod
     def acc_click():
         # 设置图片查找的准确度，范围是0-1，1是最准确，但速度慢
         accuracy = 0.8
 
-        # 图片文件的路径
-        images_path = ['et1.png', 'et2.png', 'et3.png', 'et4.png']
-
-        for image in images_path:
+        for image in textbox_images_paths:
             # 查找图片，返回图片的中心坐标
             try:
                 coords = pyautogui.locateOnScreen(image, confidence=accuracy)
@@ -66,14 +84,20 @@ class WhatsappParentNotice:
         time.sleep(self.delay)  # Adjust the wait time as needed
         self.acc_click()
         pyperclip.copy(message)
+        pyautogui.click(self.WIDTH * 0.6, self.HEIGHT * 0.9)
         pyautogui.hotkey('ctrl', 'v')
         pyautogui.press('enter')
 
-        # Wait for the message to be sent
-        time.sleep(self.delay)  # Adjust the wait time as needed
+        # In case the whatsapp number is not existing
+        time.sleep(self.delay)
+
+        pyautogui.click(self.WIDTH * 0.6, self.HEIGHT * 0.9)
+        pyautogui.click(self.WIDTH * 0.6, self.HEIGHT * 0.9)
+        Log.log_message(_time=time.localtime(), receiver=phone_number, message=message)
 
     def run(self):
         self.set_stop(False)
+
         df = pd.read_excel(self.source_file, index_col='姓名', dtype={'监护人电话': str})
 
         for name, rows in df.iterrows():
@@ -106,6 +130,8 @@ class WhatsappParentNotice:
         self.return_date = ""
         self.stop_sending = False
 
+        self.WIDTH, self.HEIGHT = size()
+
     def set_value(self, txt_source_file, return_date, float_delay=2):
         self.source_file = txt_source_file
         self.delay = float_delay
@@ -117,7 +143,8 @@ class WhatsappParentNotice:
 
 if __name__ == '__main__':
     app = WhatsappParentNotice()
-    app.set_value("w.xlsx")
+    app.set_value("w.xlsx", "2024-04-05")
     print('called in main function')
     time.sleep(1)
     app.run()
+

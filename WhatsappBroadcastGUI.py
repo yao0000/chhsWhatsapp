@@ -1,22 +1,25 @@
+import datetime
+import os
 import threading
 import tkinter
-
-from CTkMessagebox import CTkMessagebox
-from PIL import Image
+import webbrowser
 from tkinter import messagebox, font
 
-from tkcalendar import Calendar as DatePicker
-
-import os
 import customtkinter
 import pandas as pd
-import datetime
-import webbrowser
+from CTkMessagebox import CTkMessagebox
+from PIL import Image
+from tkcalendar import Calendar as DatePicker
 
-from WhatsappSendMessage import WhatsappParentNotice
-from WhatsappSendMessage import resource_path
-from WhatsappSendMessage import get_date_of_week
 from WebWhatsappSendMessage import WebWhatsappSendMessage
+from WhatsappSendMessage import WhatsappParentNotice
+from WhatsappSendMessage import get_date_of_week
+
+from MaterialSource import (
+    resource_path,
+    logo,
+    required_columns
+)
 
 
 class WhatsappParentNoticeGUI(customtkinter.CTk):
@@ -25,20 +28,50 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
 
         if self.mode_var.get() == self.WEB_APP:
             self.option_delay.configure(values=self.OPTION_WEB)
-            self.option_delay.set(self.OPTION_WEB[4])
+            self.option_delay.set(self.OPTION_WEB[2])
         elif self.mode_var.get() == self.INSTALLED_APP:
             self.option_delay.configure(values=self.OPTION_APP)
-            self.option_delay.set(self.OPTION_APP[4])
+            self.option_delay.set(self.OPTION_APP[2])
 
     def button_trigger_event(self):
         if self.tabview.get() == self.TAB1:
+
             if self.btn_send_message.cget('text') == self.STRING_BATCH_SEND:
                 if not self.display_example_event():
                     return
 
                 if self.mode_var.get() == self.INSTALLED_APP:
                     respond = CTkMessagebox(title="提示",
-                                            message='开始作业前, 请点击whatsapp聊天室的文字输入框。',
+                                            message='开始作业前, 确保已登入。\n请点击\nwhatsapp聊天室的文字输入框。',
+                                            icon='info',
+                                            option_1='取消',
+                                            option_2='开始作业')
+
+                    if respond.get() == '取消' or respond.get() is None:
+                        return
+
+                    webbrowser.open('whatsapp://')
+                    CTkMessagebox(title='提示',
+                                  message='程序执行中，勿操作电脑。\n中断作业除外。',
+                                  icon='info',
+                                  option_1='开始').get()
+
+                    self.btn_send_message.configure(text=self.STRING_CANCEL_SEND)
+
+                    self.whatsapp_thread = threading.Thread(target=lambda: (
+                        self.whatsapp.set_value(
+                            self.string_filepath.get(),
+                            self.string_return_date.get(),
+                            float(self.option_delay.get())
+                        ),
+                        self.whatsapp.run(),
+                    ))
+                    self.whatsapp_thread.start()
+
+                elif self.mode_var.get() == self.WEB_APP:
+                    webbrowser.open('https://web.whatsapp.com/')
+                    respond = CTkMessagebox(title="提示",
+                                            message='请确保默认浏览器已登入\nWhatsApp账号。\n并最大化浏览器窗口。',
                                             icon='info',
                                             option_1='取消',
                                             option_2='开始作业')
@@ -52,54 +85,19 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
                                   option_1='确认').get()
 
                     self.btn_send_message.configure(text=self.STRING_CANCEL_SEND)
-
-                    whatsapp_thread = threading.Thread(target=lambda: (
-                        self.whatsapp.set_value(
-                            self.string_filepath.get(),
-                            self.string_return_date.get(),
-                            float(self.option_delay.get())
-                        ),
-                        self.whatsapp.run(),
-
-                    ))
-                    whatsapp_thread.start()
-
-                elif self.mode_var.get() == self.WEB_APP:
-                    respond = CTkMessagebox(title="提示",
-                                            message='请确保默认浏览器已登入\nWhatsApp账号。',
-                                            icon='info',
-                                            option_1='取消',
-                                            option_2='开始作业',
-                                            option_3='打开默认浏览器')
-
-                    if respond.get() == '取消' or respond.get() is None:
-                        return
-
-                    if respond.get() == '打开默认浏览器':
-                        webbrowser.open('https://www.google.com')
-                        return
-
-                    CTkMessagebox(title='提示',
-                                  message='程序执行中，勿操作电脑。\n中断作业除外。',
-                                  icon='info',
-                                  option_1='确认').get()
-
-                    self.btn_send_message.configure(text=self.STRING_CANCEL_SEND)
-
-                    whatsapp_thread = threading.Thread(target=lambda: (
+                    self.webapp_thread = threading.Thread(target=lambda: (
                         self.web_app.set_value(
                             self.string_filepath.get(),
                             int(self.option_delay.get())
                         ),
                         self.web_app.run()
                     ))
-                    whatsapp_thread.start()
-
-                self.btn_send_message.configure(text=self.STRING_BATCH_SEND)
+                    self.webapp_thread.start()
 
             elif self.btn_send_message.cget("text") == self.STRING_CANCEL_SEND:
-                self.btn_send_message.configure(text=self.STRING_BATCH_SEND)
+                self.btn_send_message.configure(text='中断中...')
                 self.whatsapp.set_stop(True)
+                self.web_app.set_stop(True)
 
     def display_example_event(self):
         if not self.file_existing_check():
@@ -108,10 +106,9 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         df = pd.read_excel(self.string_filepath.get())
 
         if self.tabview.get() == self.TAB1:
-            column_to_check = self.whatsapp.staying_leaving_columns
-
-            if not all(column in df.columns for column in column_to_check):
-                messagebox.showerror(title="错误", message=f'Excel文件表头须拥有{column_to_check}\n请查阅"使用须知"')
+            if not all(column in df.columns for column in required_columns):
+                messagebox.showerror(title="错误",
+                                     message=f'Excel文件列名 (column) 须含有{required_columns}\n请查阅"使用说明"')
                 return False
 
             df.set_index('姓名', inplace=True)
@@ -133,7 +130,7 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
                     message = f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
                     self.textbox_staying.delete(1.0, tkinter.END)
                     self.textbox_staying.insert('0.0', message)
-                    is_displayed_leave = True
+                    is_displayed_staying = True
 
                 if is_displayed_leave and is_displayed_staying:
                     break
@@ -186,11 +183,11 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.appearance_mode_option_menu.grid(row=2, column=0, padx=5, pady=5)
         self.scaling_option_menu.grid(row=4, column=0, padx=5, pady=5)
 
-        pic_path = resource_path("i.rpr")
-        logo = customtkinter.CTkImage(light_image=Image.open(pic_path),
-                                      dark_image=Image.open(pic_path),
-                                      size=(125, 125))
-        label_logo = customtkinter.CTkLabel(self.sidebar_frame, image=logo,
+        img_path = resource_path(logo)
+        img_logo = customtkinter.CTkImage(light_image=Image.open(resource_path(img_path)),
+                                          dark_image=Image.open(img_path),
+                                          size=(125, 125))
+        label_logo = customtkinter.CTkLabel(self.sidebar_frame, image=img_logo,
                                             text="")  # display image with a CTkLabel
         label_logo.grid(row=5, column=0, padx=5, pady=5)
 
@@ -313,7 +310,8 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.btn_send_message.configure(command=self.button_trigger_event)
         self.radio_web.configure(command=self.update_option)
         self.radio_app.configure(command=self.update_option)
-        self.option_delay.set(self.OPTION_WEB[4])
+        self.mode_var.set(self.WEB_APP)
+        self.option_delay.set(self.OPTION_WEB[2])
         self.option_delay.configure(values=self.OPTION_WEB)
         self.tabview.set(self.TAB1)
         self.string_filepath.set("./w.xlsx")
@@ -346,10 +344,6 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.geometry(f"{800}x{450}")
         self.change_appearance_mode_event("深色模式")  # set default appearance
         self.minsize(800, 450)
-
-        # backend whatsapp message sending initialisation
-        self.whatsapp = WhatsappParentNotice()
-        self.web_app = WebWhatsappSendMessage()
 
         # configure grid layout
         self.grid_columnconfigure(1, weight=2)
@@ -403,9 +397,8 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.textbox_staying = customtkinter.CTkTextbox(master=self.tabview.tab(self.TAB1),
                                                         height=50)
 
-
         self.OPTION_APP = ['1', '2', '3', '4', '5']
-        self.OPTION_WEB = [str(int(option) + 10) for option in self.OPTION_APP]
+        self.OPTION_WEB = ['8', '10', '12', '14', '16']
         self.option_delay = customtkinter.CTkOptionMenu(master=self.tabview.tab(self.TAB1),
                                                         dynamic_resizing=False)
 
@@ -414,10 +407,30 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.btn_send_message = customtkinter.CTkButton(master=self.tabview.tab(self.TAB1),
                                                         text=self.STRING_BATCH_SEND,
                                                         border_width=2)
-        self.WEB_APP = '网页版 (推荐)'
+
+        # backend whatsapp message sending initialisation
+        self.whatsapp = WhatsappParentNotice()
+        self.web_app = WebWhatsappSendMessage(self.btn_send_message)
+        self.WEB_APP = '网页版(推荐)'
         self.INSTALLED_APP = 'WhatsApp应用'
         self.mode_var = customtkinter.StringVar()
-        self.mode_var.set(self.WEB_APP)
+        self.whatsapp_thread = threading.Thread(target=lambda: (
+            self.whatsapp.set_value(
+                self.string_filepath.get(),
+                self.string_return_date.get(),
+                float(self.option_delay.get())
+            ),
+            self.whatsapp.run(),
+        ))
+
+        self.webapp_thread = threading.Thread(target=lambda: (
+            self.web_app.set_value(
+                self.string_filepath.get(),
+                int(self.option_delay.get())
+            ),
+            self.web_app.run()
+        ))
+
         self.radio_web = customtkinter.CTkRadioButton(master=self.tabview.tab(self.TAB1),
                                                       text=self.WEB_APP,
                                                       variable=self.mode_var,
