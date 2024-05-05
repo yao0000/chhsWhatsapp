@@ -16,10 +16,12 @@ from WhatsappSendMessage import WhatsappParentNotice
 from WhatsappSendMessage import get_date_of_week
 
 from MaterialSource import (
-    resource_path,
     logo,
     required_columns
 )
+
+import time
+start_time = 0
 
 
 class WhatsappParentNoticeGUI(customtkinter.CTk):
@@ -28,45 +30,49 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
 
         if self.mode_var.get() == self.WEB_APP:
             self.option_delay.configure(values=self.OPTION_WEB)
-            self.option_delay.set(self.OPTION_WEB[2])
+            self.option_delay.set(self.OPTION_WEB[1])
         elif self.mode_var.get() == self.INSTALLED_APP:
             self.option_delay.configure(values=self.OPTION_APP)
-            self.option_delay.set(self.OPTION_APP[2])
+            self.option_delay.set(self.OPTION_APP[1])
 
     def button_trigger_event(self):
         if self.tabview.get() == self.TAB1:
 
             if self.btn_send_message.cget('text') == self.STRING_BATCH_SEND:
-                if not self.display_example_event():
-                    return
-
                 if self.mode_var.get() == self.INSTALLED_APP:
-                    respond = CTkMessagebox(title="提示",
-                                            message='开始作业前, 确保已登入。\n请点击\nwhatsapp聊天室的文字输入框。',
-                                            icon='info',
-                                            option_1='取消',
-                                            option_2='开始作业')
+                    """
+                                        respond = CTkMessagebox(title="提示",
+                                                                message='开始作业前, 确保已登入。\n请点击\nwhatsapp聊天室的文字输入框。',
+                                                                icon='info',
+                                                                option_1='取消',
+                                                                option_2='开始作业')
 
-                    if respond.get() == '取消' or respond.get() is None:
-                        return
+                                        if respond.get() == '取消' or respond.get() is None:
+                                            return
 
-                    webbrowser.open('whatsapp://')
+                                        webbrowser.open('whatsapp://')
+                                        CTkMessagebox(title='提示',
+                                                      message='程序执行中，勿操作电脑。\n中断作业除外。',
+                                                      icon='info',
+                                                      option_1='开始').get()
+
+                                        self.btn_send_message.configure(text=self.STRING_CANCEL_SEND)
+
+                                        self.whatsapp_thread = threading.Thread(target=lambda: (
+                                            self.whatsapp.set_value(
+                                                self.string_filepath.get(),
+                                                self.string_return_date.get(),
+                                                float(self.option_delay.get())
+                                            ),
+                                            self.whatsapp.run(),
+                                        ))
+                                        self.whatsapp_thread.start()
+                                        """
                     CTkMessagebox(title='提示',
-                                  message='程序执行中，勿操作电脑。\n中断作业除外。',
+                                  message='尚未开发完成。请联系负责人。',
                                   icon='info',
-                                  option_1='开始').get()
-
-                    self.btn_send_message.configure(text=self.STRING_CANCEL_SEND)
-
-                    self.whatsapp_thread = threading.Thread(target=lambda: (
-                        self.whatsapp.set_value(
-                            self.string_filepath.get(),
-                            self.string_return_date.get(),
-                            float(self.option_delay.get())
-                        ),
-                        self.whatsapp.run(),
-                    ))
-                    self.whatsapp_thread.start()
+                                  option_1='确认').get()
+                    return
 
                 elif self.mode_var.get() == self.WEB_APP:
                     webbrowser.open('https://web.whatsapp.com/')
@@ -183,8 +189,8 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.appearance_mode_option_menu.grid(row=2, column=0, padx=5, pady=5)
         self.scaling_option_menu.grid(row=4, column=0, padx=5, pady=5)
 
-        img_path = resource_path(logo)
-        img_logo = customtkinter.CTkImage(light_image=Image.open(resource_path(img_path)),
+        img_path = logo
+        img_logo = customtkinter.CTkImage(light_image=Image.open(img_path),
                                           dark_image=Image.open(img_path),
                                           size=(125, 125))
         label_logo = customtkinter.CTkLabel(self.sidebar_frame, image=img_logo,
@@ -341,9 +347,9 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         super().__init__()
 
         self.title("Whatsapp 通知系统")
-        self.geometry(f"{800}x{450}")
+        self.geometry(f"{850}x{450}")
         self.change_appearance_mode_event("深色模式")  # set default appearance
-        self.minsize(800, 450)
+        self.minsize(850, 450)
 
         # configure grid layout
         self.grid_columnconfigure(1, weight=2)
@@ -448,18 +454,15 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
         self.tab3_grid_init()
 
         self.config()
+        end_time = time.time()
+        print(f'duration: {end_time - start_time} seconds')
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     app = WhatsappParentNoticeGUI()
     try:
         app.mainloop()
     except Exception as error:
         messagebox.showerror(message=str(error))
         app.destroy()
-
-"""
-pyinstaller --noconfirm --onefile --windowed --add-data "D:/chhs/dev/Project/WhatsappBroadcast/.venv/Lib/site-packages/customtkinter;customtkinter/" 
---add-data "D:/chhs/dev/Project/WhatsappBroadcast/_internal/src/i.rpr;." WhatsappBroadcastGUI.py
-
-"""

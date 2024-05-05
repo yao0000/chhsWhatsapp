@@ -3,7 +3,6 @@ import time
 
 import pyautogui
 import pywhatkit
-import webbrowser
 import pandas as pd
 from pynput.keyboard import Controller
 from tkinter import messagebox
@@ -17,79 +16,52 @@ from MaterialSource import (
 
 keyboard = Controller()
 
-delay = 8
-
-
-def detect_error(phone_number: str):
-    print('enter detect error function')
-    accuracy = 0.8
-    time.sleep(delay)
-
-    for image in user_not_found_images_paths:
-        try:
-            coords = pyautogui.locateOnScreen(image, confidence=accuracy)
-
-            if coords is not None:
-                Log.log_message(_time=time.localtime(), receiver=phone_number, message='用户不存在')
-                print(f'{phone_number} 不存在')
-                break
-        except Exception as err:
-            print(f"err; {str(err)}")
-
-
-def whatsapp(phone_no: str, msg: str):
-    pywhatkit.sendwhatmsg_instantly(phone_no=phone_no, message=msg, tab_close=True, wait_time=delay)
-
-
-def send_whatsapp_message(msg: str, phone_numbers: list):
-    try:
-        for phone_no in phone_numbers:
-            whatsapp_thread = threading.Thread(target=whatsapp, args=(phone_no, msg))
-            whatsapp_thread.start()
-
-            detect_error(phone_no)
-            whatsapp_thread.join()
-
-            print(f"Message sent to {phone_no}!")
-
-    except Exception as err:
-        print(str(err))
-
 
 class WebWhatsappSendMessage:
-    def invalid_account_check(self, phone_number: str):
-        accuracy = 0.8
+    def invalid_account_check(self, phone_number: str, floor: str, name: str):
+        accuracy = 0.5
         time.sleep(self.delay)
 
         for image in user_not_found_images_paths:
+
             try:
                 coords = pyautogui.locateOnScreen(image, confidence=accuracy)
 
-                if coords is not None:
+                if coords:
+                    print(f'Error： [{floor}] {phone_number} invalid')
                     Log.log_message(_time=time.localtime(),
                                     receiver=phone_number,
-                                    message='检测到该用户不存在。')
-                    print(f'{phone_number} 用户不存在')
+                                    message='检测到该用户不存在。',
+                                    floor=floor,
+                                    name=name)
                     return
             except Exception as err:
-                print(f'error: {str(err)}')
+                str(err)
 
     def whatsapp_send(self, phone_number: str, msg: str):
-        pywhatkit.sendwhatmsg_instantly(phone_no=phone_number,
-                                        message=msg,
-                                        tab_close=True,
-                                        wait_time=self.delay)
+        if not phone_number.startswith('+'):
+            phone_number = '+' + phone_number
 
-    def send(self, phone_no: str, msg: str):
         try:
+            pywhatkit.sendwhatmsg_instantly(phone_no=phone_number,
+                                            message=msg,
+                                            tab_close=True,
+                                            wait_time=self.delay)
+        except Exception as err:
+            messagebox.showerror(title="错误", message=str(err))
+            if self.btn is not None:
+                self.btn.configure(text="批量发送信息")
+
+    def send(self, phone_no: str, msg: str, name: str, floor: str):
+        try:
+            print(f'Message sent to {phone_no}')
             whatsapp_thread = threading.Thread(target=self.whatsapp_send, args=(phone_no, msg))
             whatsapp_thread.start()
 
-            self.invalid_account_check(phone_no)
+            self.invalid_account_check(phone_no, floor, name)
             whatsapp_thread.join()
-            print(f"Message sent to {phone_no}!")
         except Exception as err:
-            print(f'error: {str(err)}')
+            str(err)
 
     def set_value(self, txt_source_file, float_delay=15):
         self.source_file = txt_source_file
@@ -97,7 +69,7 @@ class WebWhatsappSendMessage:
 
     def set_stop(self, status: bool):
         self.stop_sending = status
-        print(f'status: {self.stop_sending}')
+        print('stopping...')
 
     def __init__(self, btn_send=None):
         self.source_file = ""
@@ -115,28 +87,33 @@ class WebWhatsappSendMessage:
         for name, rows in df.iterrows():
 
             if self.stop_sending:
-                print('stopping......')
+                print('Program stopped')
                 messagebox.showinfo(title='已停止发送', message=f'中断于同学：{name}')
                 if self.btn is not None:
                     self.btn.configure(text="批量发送信息")
                 return
 
             elif pd.isna(rows['监护人电话']) or rows['离舍'] == 3:
+                Log.log_message(_time=time.localtime(),
+                                receiver="未知",
+                                message='无联络电话。',
+                                floor=str(rows['寝室']),
+                                name=str(name))
                 continue
 
             elif rows['离舍'] == 0:
                 message = f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
-                self.send(rows['监护人电话'], message)
+                self.send(rows['监护人电话'], message, str(name), str(rows['寝室']))
 
             elif rows['离舍'] == 1:
                 text_date = ' (星期' + get_date_of_week(rows['日期']) + ')'
                 timing = str(rows['日期'])[:10] + text_date + ' ' + str(rows['时间'])[:5]
                 message = f'{name} 同学 {rows['寝室']} 于 {timing} 离校 (回家)。\n敬请家长/监护人关注。'
-                self.send(rows['监护人电话'], message)
+                self.send(rows['监护人电话'], message, str(name), str(rows['寝室']))
 
             elif rows['离舍'] == 2:  # case that when other message is not null
                 message = str(rows['其他信息'])
-                self.send(rows['监护人电话'], message)
+                self.send(rows['监护人电话'], message, str(name), str(rows['寝室']))
 
         if self.btn is not None:
             self.btn.configure(text="批量发送信息")
@@ -151,14 +128,14 @@ def local():
 def test():
     friend_numbers = ["+60163490531", "+6586518193", "+60126580830", ]
     message = "Hey bro, have you completed your Python task?"
-    send_whatsapp_message(msg=message, phone_numbers=friend_numbers)
+    #send_whatsapp_message(msg=message, phone_numbers=friend_numbers)
 
-"""
+
 if __name__ == "__main__":
 
     try:
-        test()
+        local()
     except Exception as e:
         print(f'error: {str(e)}')
         exit(0)
-        """
+

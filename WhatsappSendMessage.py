@@ -47,12 +47,11 @@ class WhatsappParentNotice:
                     Log.log_message(_time=time.localtime(),
                                     receiver=phone_number,
                                     message='用户不存在')
+                    print(f'已添加日志报告：{phone_number}')
                     return
-                else:
-                    print('not found')
 
             except Exception as e:
-                print(f'err: {str(e)}')
+                str(e)
 
     @staticmethod
     def acc_click():
