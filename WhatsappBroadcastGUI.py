@@ -21,6 +21,7 @@ from MaterialSource import (
 )
 
 import time
+
 start_time = 0
 
 
@@ -126,14 +127,20 @@ class WhatsappParentNoticeGUI(customtkinter.CTk):
                 if rows['离舍'] == 1 and not is_displayed_leave:
                     text_date = ' (星期' + get_date_of_week(rows['日期']) + ')'
                     timing = str(rows['日期'])[:10] + text_date + ' ' + str(rows['时间'])[:5]
-                    message = f'{name} 同学 {rows['寝室']} 于 {timing} 离校 (回家)。\n敬请家长/监护人关注。'
+                    message = (f'銮中宿舍通知：\n'
+                               f'{name} 同学 {rows['寝室']} 于 {timing} 离舍 (回家)。\n'
+                               f'敬请家长/监护人关注。\n'
+                               f'如有疑问，请联系 +60106638823。谢谢。')
 
                     self.textbox_leaving.delete(1.0, tkinter.END)
                     self.textbox_leaving.insert('0.0', message)
                     is_displayed_leave = True
 
                 elif rows['离舍'] == 0 and not is_displayed_staying:
-                    message = f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
+                    message = (f"銮中宿舍通知：\n"
+                               f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n"
+                               f"敬请家长/监护人关注。\n"
+                               f"如有疑问，请联系 +60106638823。谢谢。")
                     self.textbox_staying.delete(1.0, tkinter.END)
                     self.textbox_staying.insert('0.0', message)
                     is_displayed_staying = True

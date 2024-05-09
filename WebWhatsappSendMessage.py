@@ -16,6 +16,9 @@ from MaterialSource import (
 
 keyboard = Controller()
 
+header = "銮中宿舍通知：\n"
+ending = "\n如有疑问，请联系 +60106638823。谢谢。"
+
 
 class WebWhatsappSendMessage:
     def invalid_account_check(self, phone_number: str, floor: str, name: str):
@@ -69,7 +72,6 @@ class WebWhatsappSendMessage:
 
     def set_stop(self, status: bool):
         self.stop_sending = status
-        print('stopping...')
 
     def __init__(self, btn_send=None):
         self.source_file = ""
@@ -93,7 +95,10 @@ class WebWhatsappSendMessage:
                     self.btn.configure(text="批量发送信息")
                 return
 
-            elif pd.isna(rows['监护人电话']) or rows['离舍'] == 3:
+            elif rows['离舍'] == 3:
+                continue
+
+            elif pd.isna(rows['监护人电话']):
                 Log.log_message(_time=time.localtime(),
                                 receiver="未知",
                                 message='无联络电话。',
@@ -102,17 +107,22 @@ class WebWhatsappSendMessage:
                 continue
 
             elif rows['离舍'] == 0:
-                message = f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
+
+                message = (header +
+                           f"{name} 同学 {rows['寝室']} 于 {str(rows['日期'])[:10]} 本周留舍 (留校)。\n敬请家长/监护人关注。"
+                           + ending)
                 self.send(rows['监护人电话'], message, str(name), str(rows['寝室']))
 
             elif rows['离舍'] == 1:
                 text_date = ' (星期' + get_date_of_week(rows['日期']) + ')'
                 timing = str(rows['日期'])[:10] + text_date + ' ' + str(rows['时间'])[:5]
-                message = f'{name} 同学 {rows['寝室']} 于 {timing} 离校 (回家)。\n敬请家长/监护人关注。'
+                message = (header +
+                           f'{name} 同学 {rows['寝室']} 于 {timing} 离舍 (回家)。\n敬请家长/监护人关注。'
+                           + ending)
                 self.send(rows['监护人电话'], message, str(name), str(rows['寝室']))
 
             elif rows['离舍'] == 2:  # case that when other message is not null
-                message = str(rows['其他信息'])
+                message = header + str(rows['其他信息']) + ending
                 self.send(rows['监护人电话'], message, str(name), str(rows['寝室']))
 
         if self.btn is not None:
@@ -128,9 +138,9 @@ def local():
 def test():
     friend_numbers = ["+60163490531", "+6586518193", "+60126580830", ]
     message = "Hey bro, have you completed your Python task?"
-    #send_whatsapp_message(msg=message, phone_numbers=friend_numbers)
+    # send_whatsapp_message(msg=message, phone_numbers=friend_numbers)
 
-
+"""
 if __name__ == "__main__":
 
     try:
@@ -138,4 +148,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f'error: {str(e)}')
         exit(0)
-
+        """
