@@ -128,6 +128,8 @@ class WebWhatsappSendMessage:
         if self.btn is not None:
             self.btn.configure(text="批量发送信息")
 
+        messagebox.showinfo("已完成该Excel名单")
+
 
 def local():
     a = WebWhatsappSendMessage()
